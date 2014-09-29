@@ -1,11 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+
 namespace TuesPechkin
 {
     [Serializable]
-    public class HtmlToPdfDocument : IHtmlToSomethingDocument
+    public class HtmlToImageDocument : IHtmlToSomethingDocument
     {
-        public HtmlToPdfDocument()
+        public HtmlToImageDocument()
         {
             this.Objects = new List<ObjectSettings>();
         }
@@ -41,23 +44,16 @@ namespace TuesPechkin
         {
             converter = IntPtr.Zero;
 
-            var config = PechkinStatic.CreateGlobalSetting();
+            var config = ImageStatic.CreateGlobalSetting();
 
             SettingApplicator.ApplySettings(config, this.global, true);
 
-            converter = PechkinStatic.CreateConverter(config);
 
-            //if (this.TableOfContents != null)
-            //{
-            //    this.TableOfContents.ApplyToConverter(converter);
-            //}
-
-            foreach (var setting in this.Objects)
+            var setting = this.Objects.Single();
+            if (setting != null)
             {
-                if (setting != null)
-                {
-                    setting.ApplyToConverter(converter);
-                }
+                setting.ApplyToConverter(converter);
+                converter = ImageStatic.CreateConverter(config, setting.RawData);
             }
         }
 

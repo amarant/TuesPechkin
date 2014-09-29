@@ -118,7 +118,7 @@ namespace TuesPechkin
             }
         }
 
-        internal void ApplyToConverter(IntPtr converter)
+        internal virtual void ApplyToConverter(IntPtr converter)
         {
             var config = PechkinStatic.CreateObjectSettings();
 
@@ -129,6 +129,15 @@ namespace TuesPechkin
             SettingApplicator.ApplySettings(config, this.LoadSettings);
 
             PechkinStatic.AddObject(converter, config, this.data);
+        }
+
+        internal void ApplyToConverter(IntPtr converter, IntPtr config)
+        {
+            SettingApplicator.ApplySettings(config, this);
+            SettingApplicator.ApplySettings(config, this.HeaderSettings);
+            SettingApplicator.ApplySettings(config, this.FooterSettings);
+            SettingApplicator.ApplySettings(config, this.WebSettings);
+            SettingApplicator.ApplySettings(config, this.LoadSettings);
         }
 
         private void AssertNotNull(object value)
