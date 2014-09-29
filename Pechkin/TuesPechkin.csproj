@@ -101,6 +101,7 @@
     <Compile Include="Factory.cs" />
     <Compile Include="FooterSettings.cs" />
     <Compile Include="HeaderSettings.cs" />
+    <Compile Include="ImageStatic.cs" />
     <Compile Include="LoadSettings.cs" />
     <Compile Include="MarginSettings.cs" />
     <Compile Include="PechkinPaperSize.cs" />
