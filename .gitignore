@@ -10,3 +10,4 @@ _ReSharper.*
 TestResults
 *.nupkg
 *.nuspec
+/packages
