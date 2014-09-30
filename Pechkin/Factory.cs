@@ -14,12 +14,15 @@ namespace TuesPechkin
     /// </summary>
     public static class Factory
     {
-        private static readonly object setupLock = new object();
-
         /// <summary>
         /// The AppDomain used to encapsulate calls to the wkhtmltopdf library
         /// </summary>
-        private static AppDomain operatingDomain = null;
+        private static Lazy<AppDomain> _operatingDomain = new Lazy<AppDomain>(Factory.SetupAppDomain);
+
+        private static AppDomain OperatingDomain
+        {
+            get { return _operatingDomain.Value; }
+        }
 
         /// <summary>
         /// When set to true, Pechkin.Factory will set up wkhtmltopdf to use X11 graphics mode.
@@ -35,24 +38,12 @@ namespace TuesPechkin
         /// <returns>IPechkin</returns>
         public static IPechkin Create()
         {
-            if (Factory.operatingDomain == null)
-            {
-                lock (setupLock)
-                {
-                    if (Factory.operatingDomain == null)
-                    {
-                        Factory.SetupAppDomain();
-                    }
-                }
-            }
-            
             ObjectHandle handle = Activator.CreateInstanceFrom(
-                Factory.operatingDomain,
+                Factory.OperatingDomain,
                 Assembly.GetExecutingAssembly().Location,
                 typeof(SimplePechkin).FullName,
                 false,
                 BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance,
-                null,
                 null,
                 null,
                 null,
@@ -68,13 +59,13 @@ namespace TuesPechkin
         /// wkhtmltopdf library. Attaches to the current AppDomain's DomainUnload event in IIS environments 
         /// to ensure that on re-deploy, the library is freed so the new AppDomain will be able to use it.
         /// </summary>
-        internal static void SetupAppDomain()
+        internal static AppDomain SetupAppDomain()
         {
-            SynchronizedDispatcher.Invoke(() =>
+            var syncDomain = SynchronizedDispatcher.Invoke(() =>
             {
                 var dirName = System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
                 var setup = new AppDomainSetup() { ApplicationBase = dirName };
-                var domain = Factory.operatingDomain = AppDomain.CreateDomain("pechkin_internal_domain", null, setup);
+                var domain = AppDomain.CreateDomain("pechkin_internal_domain", null, setup);
 
                 domain.SetData("useX11Graphics", Factory.UseX11Graphics);
 
@@ -83,12 +74,16 @@ namespace TuesPechkin
                     var useX11Graphics = (bool)AppDomain.CurrentDomain.GetData("useX11Graphics");
                     PechkinBindings.wkhtmltopdf_init(useX11Graphics ? 1 : 0);
                 });
+
+                return domain;
             });
 
             if (AppDomain.CurrentDomain.IsDefaultAppDomain() == false)
             {
                 AppDomain.CurrentDomain.DomainUnload += Factory.TearDownAppDomain;
             }
+
+            return syncDomain;
         }
 
         /// <summary>
@@ -99,14 +94,11 @@ namespace TuesPechkin
         /// <param name="e">Typically EventArgs.Empty, not used in the method.</param>
         internal static void TearDownAppDomain(object sender, EventArgs e)
         {
-            if (Factory.operatingDomain != null)
+            if (Factory._operatingDomain.IsValueCreated)
             {
-                SynchronizedDispatcher.Invoke(() =>
-                {
-                    Factory.operatingDomain.DoCallBack(() => PechkinBindings.wkhtmltopdf_deinit());
-                });
+                SynchronizedDispatcher.Invoke(() => Factory.OperatingDomain.DoCallBack(() => PechkinBindings.wkhtmltopdf_deinit()));
 
-                AppDomain.Unload(Factory.operatingDomain);
+                AppDomain.Unload(Factory.OperatingDomain);
 
                 foreach (ProcessModule module in Process.GetCurrentProcess().Modules)
                 {
@@ -117,8 +109,6 @@ namespace TuesPechkin
                         }
                     }
                 }
-
-                Factory.operatingDomain = null;
             }
         }
     }
