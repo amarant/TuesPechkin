@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -37,10 +38,9 @@ namespace PechkinTests
         [Fact]
         public void BubblesExceptionsFromSyncedThread()
         {
-            Assert.Throws<ApplicationException>(() =>
-            {
-                SynchronizedDispatcher.Invoke(() => { throw new ApplicationException(); });
-            });
+            Assert.Throws<ApplicationException>(() => 
+                SynchronizedDispatcher.Invoke(() 
+                    => { throw new ApplicationException(); }));
         }
 
         [Fact]
@@ -87,11 +87,11 @@ namespace PechkinTests
 
             var tasks = Enumerable.Range(0, numberOfTasks).Select(i => new Task(() =>
             {
-                Debug.WriteLine(String.Format("#{0} started", i + 1));
+                Debug.WriteLine("#{0} started", i + 1);
                 IPechkin sc = Factory.Create();
                 Assert.NotNull(sc.Convert(html));
                 completed++;
-                Debug.WriteLine(String.Format("#{0} completed", i + 1));
+                Debug.WriteLine("#{0} completed", i + 1);
             }));
 
             Parallel.ForEach(tasks, task => task.Start());
